@@ -135,7 +135,7 @@ fn part2(bingo: &Bingo) -> () {
           to_remove.push(i);
         } else {
           println!(
-            "Result part1: {:>10} | elapsed time: {:.2?}",
+            "Result part2: {:>10} | elapsed time: {:.2?}",
             value,
             before.elapsed()
           );
