@@ -31,12 +31,6 @@ fn parse_file(filename: impl AsRef<std::path::Path>) -> HashMap<u64, u64> {
       *map.entry(e.abs() as u64).or_insert(0) += 1;
       map
     });
-  println!(
-    "{}",
-    fishes
-      .iter()
-      .fold(String::new(), |s, e| format!("{},{}:{}", s, e.1, e.0))
-  );
   println!("Parsing: elapsed time: {:.2?}", before.elapsed());
   fishes
 }
