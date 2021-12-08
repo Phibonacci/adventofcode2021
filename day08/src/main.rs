@@ -57,7 +57,6 @@ fn part1(data: &Vec<Screen>) -> () {
   );
 }
 
-// the mean seems to be very close from the expected results so I just iterate from there
 fn part2(data: &Vec<Screen>) -> () {
   let before = std::time::Instant::now();
   let mut result = 0;
