@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use std::cmp::PartialOrd;
-use std::collections::HashMap;
 
 use priority_queue::PriorityQueue;
 
@@ -65,18 +64,18 @@ impl Ord for Distance {
 
 fn dijkstra(map: &Map) -> u64 {
   let mut unvisited = PriorityQueue::<Pos, Distance>::new();
-  let mut nodes = HashMap::new();
+  let mut nodes = vec![None; map.len() * map.last().unwrap().len()];
   let mut current: Pos = (0, 0);
   let mut current_distance = 0;
-  nodes.insert(current, 0);
+  nodes[current.1 * map[0].len() + current.0] = Some(0);
   let end: Pos = (map.last().unwrap().len() - 1, map.len() - 1);
 
   while current != end {
     for neighbour in &get_neighbours(map, &current) {
       let neighbour_local_distance = map[neighbour.1][neighbour.0];
       let new_distance = neighbour_local_distance + current_distance;
-      let node_exists = nodes.contains_key(&neighbour);
-      if !node_exists || new_distance < nodes[&neighbour] {
+      let node_exists = !nodes[neighbour.1 * map[0].len() + neighbour.0].is_none();
+      if !node_exists || new_distance < nodes[neighbour.1 * map[0].len() + neighbour.0].unwrap() {
         if !node_exists {
           unvisited.push(
             *neighbour,
@@ -84,7 +83,6 @@ fn dijkstra(map: &Map) -> u64 {
               distance: new_distance,
             },
           );
-          nodes.insert(*neighbour, new_distance);
         } else {
           unvisited.change_priority(
             neighbour,
@@ -92,15 +90,15 @@ fn dijkstra(map: &Map) -> u64 {
               distance: new_distance,
             },
           );
-          *nodes.get_mut(&neighbour).unwrap() = new_distance;
         }
+        nodes[neighbour.1 * map[0].len() + neighbour.0] = Some(new_distance);
       }
     }
     let next = unvisited.pop().unwrap();
     current = next.0;
     current_distance = next.1.distance;
   }
-  *nodes.get_mut(&end).unwrap()
+  nodes[end.1 * map[0].len() + end.0].unwrap()
 }
 
 fn get_neighbours(map: &Map, pos: &Pos) -> Neighbours {
