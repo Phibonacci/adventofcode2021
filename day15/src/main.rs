@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use priority_queue::DoublePriorityQueue;
+
 fn main() {
   let before = std::time::Instant::now();
   let args: Vec<String> = std::env::args().collect();
@@ -47,44 +49,33 @@ struct Node {
   local_distance: u64,
   distance: Option<u64>,
   is_visited: bool,
-  neighbours: Neighbours,
 }
 
 fn dijkstra(map: &Map) -> u64 {
-  let mut unvisited = HashSet::new();
+  let mut unvisited = DoublePriorityQueue::<Pos, u64>::new();
   let mut nodes = create_nodes(&map);
+  let neighbours = create_neighbours(&map);
   let mut current: Pos = (0, 0);
   nodes.get_mut(&current).unwrap().distance = Some(0);
-  unvisited.insert(current);
   let end: Pos = (map.last().unwrap().len() - 1, map.len() - 1);
   while current != end {
-    let neighbours = nodes[&current].neighbours.clone();
     let current_distance = nodes[&current].distance.unwrap();
-    for neighbour in neighbours {
+    for neighbour in &neighbours[&current] {
       let neighbour_local_distance = nodes[&neighbour].local_distance;
       let new_distance = neighbour_local_distance + current_distance;
       if nodes[&neighbour].distance.is_none() || new_distance < nodes[&neighbour].distance.unwrap()
       {
         nodes.get_mut(&neighbour).unwrap().distance = Some(new_distance);
         if !nodes[&neighbour].is_visited {
-          unvisited.insert(neighbour);
+          unvisited.push(*neighbour, nodes[neighbour].distance.unwrap());
+        } else {
+          unvisited.change_priority(neighbour, nodes[neighbour].distance.unwrap());
         }
       }
     }
     nodes.get_mut(&current).unwrap().is_visited = true;
     unvisited.remove(&current);
-    current = unvisited
-      .iter()
-      .fold(None, |smallest, n| {
-        if smallest.is_none()
-          || nodes[&smallest.unwrap()].distance.unwrap() > nodes[n].distance.unwrap()
-        {
-          Some(*n)
-        } else {
-          smallest
-        }
-      })
-      .unwrap();
+    current = *unvisited.peek_min().unwrap().0;
   }
   nodes.get_mut(&end).unwrap().is_visited = true;
   nodes.get_mut(&end).unwrap().distance.unwrap()
@@ -102,12 +93,22 @@ fn create_nodes(map: &Map) -> HashMap<Pos, Node> {
           local_distance: map[v][h],
           distance: None,
           is_visited: false,
-          neighbours: get_neighbours(map, &pos),
         },
       );
     }
   }
   nodes
+}
+
+fn create_neighbours(map: &Map) -> HashMap<Pos, Neighbours> {
+  let mut neighbours = HashMap::new();
+  for v in 0..map.len() {
+    for h in 0..map[v].len() {
+      let pos = (h, v);
+      neighbours.insert(pos, get_neighbours(map, &pos));
+    }
+  }
+  neighbours
 }
 
 fn get_neighbours(map: &Map, pos: &Pos) -> Neighbours {
