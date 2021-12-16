@@ -1,7 +1,8 @@
+use std::cmp::Ordering;
+use std::cmp::PartialOrd;
 use std::collections::HashMap;
-use std::collections::HashSet;
 
-use priority_queue::DoublePriorityQueue;
+use priority_queue::PriorityQueue;
 
 fn main() {
   let before = std::time::Instant::now();
@@ -43,87 +44,78 @@ fn part1(data: &Map) {
   );
 }
 
-type Neighbours = HashSet<Pos>;
-struct Node {
-  _pos: Pos,
-  local_distance: u64,
-  distance: Option<u64>,
-  is_visited: bool,
+type Neighbours = Vec<Pos>;
+
+#[derive(PartialEq, Eq, Hash)]
+struct Distance {
+  distance: u64,
+}
+
+impl PartialOrd for Distance {
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    other.distance.partial_cmp(&self.distance)
+  }
+}
+
+impl Ord for Distance {
+  fn cmp(&self, other: &Self) -> Ordering {
+    self.distance.cmp(&other.distance)
+  }
 }
 
 fn dijkstra(map: &Map) -> u64 {
-  let mut unvisited = DoublePriorityQueue::<Pos, u64>::new();
-  let mut nodes = create_nodes(&map);
-  let neighbours = create_neighbours(&map);
+  let mut unvisited = PriorityQueue::<Pos, Distance>::new();
+  let mut nodes = HashMap::new();
   let mut current: Pos = (0, 0);
-  nodes.get_mut(&current).unwrap().distance = Some(0);
+  let mut current_distance = 0;
+  nodes.insert(current, 0);
   let end: Pos = (map.last().unwrap().len() - 1, map.len() - 1);
+
   while current != end {
-    let current_distance = nodes[&current].distance.unwrap();
-    for neighbour in &neighbours[&current] {
-      let neighbour_local_distance = nodes[&neighbour].local_distance;
+    for neighbour in &get_neighbours(map, &current) {
+      let neighbour_local_distance = map[neighbour.1][neighbour.0];
       let new_distance = neighbour_local_distance + current_distance;
-      if nodes[&neighbour].distance.is_none() || new_distance < nodes[&neighbour].distance.unwrap()
-      {
-        nodes.get_mut(&neighbour).unwrap().distance = Some(new_distance);
-        if !nodes[&neighbour].is_visited {
-          unvisited.push(*neighbour, nodes[neighbour].distance.unwrap());
+      let node_exists = nodes.contains_key(&neighbour);
+      if !node_exists || new_distance < nodes[&neighbour] {
+        if !node_exists {
+          unvisited.push(
+            *neighbour,
+            Distance {
+              distance: new_distance,
+            },
+          );
+          nodes.insert(*neighbour, new_distance);
         } else {
-          unvisited.change_priority(neighbour, nodes[neighbour].distance.unwrap());
+          unvisited.change_priority(
+            neighbour,
+            Distance {
+              distance: new_distance,
+            },
+          );
+          *nodes.get_mut(&neighbour).unwrap() = new_distance;
         }
       }
     }
-    nodes.get_mut(&current).unwrap().is_visited = true;
-    unvisited.remove(&current);
-    current = *unvisited.peek_min().unwrap().0;
+    let next = unvisited.pop().unwrap();
+    current = next.0;
+    current_distance = next.1.distance;
   }
-  nodes.get_mut(&end).unwrap().is_visited = true;
-  nodes.get_mut(&end).unwrap().distance.unwrap()
-}
-
-fn create_nodes(map: &Map) -> HashMap<Pos, Node> {
-  let mut nodes = HashMap::<Pos, Node>::new();
-  for v in 0..map.len() {
-    for h in 0..map[v].len() {
-      let pos = (h, v);
-      nodes.insert(
-        pos,
-        Node {
-          _pos: pos,
-          local_distance: map[v][h],
-          distance: None,
-          is_visited: false,
-        },
-      );
-    }
-  }
-  nodes
-}
-
-fn create_neighbours(map: &Map) -> HashMap<Pos, Neighbours> {
-  let mut neighbours = HashMap::new();
-  for v in 0..map.len() {
-    for h in 0..map[v].len() {
-      let pos = (h, v);
-      neighbours.insert(pos, get_neighbours(map, &pos));
-    }
-  }
-  neighbours
+  *nodes.get_mut(&end).unwrap()
 }
 
 fn get_neighbours(map: &Map, pos: &Pos) -> Neighbours {
   let mut neighbours = Neighbours::new();
   if pos.0 > 0 {
-    neighbours.insert((pos.0 - 1, pos.1));
+    neighbours.push((pos.0 - 1, pos.1));
   }
   if pos.1 > 0 {
-    neighbours.insert((pos.0, pos.1 - 1));
+    neighbours.push((pos.0, pos.1 - 1));
   }
   if pos.0 < map[pos.1].len() - 1 {
-    neighbours.insert((pos.0 + 1, pos.1));
+    neighbours.push((pos.0 + 1, pos.1));
   }
   if pos.1 < map.len() - 1 {
-    neighbours.insert((pos.0, pos.1 + 1));
+    neighbours.push((pos.0, pos.1 + 1));
   }
   neighbours
 }
