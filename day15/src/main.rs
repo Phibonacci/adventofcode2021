@@ -1,5 +1,4 @@
-use std::cmp::Ordering;
-use std::cmp::PartialOrd;
+use std::cmp::Reverse;
 
 use priority_queue::PriorityQueue;
 
@@ -45,31 +44,13 @@ fn part1(data: &Map) {
 
 type Neighbours = Vec<Pos>;
 
-#[derive(PartialEq, Eq, Hash)]
-struct Distance {
-  distance: u64,
-}
-
-impl PartialOrd for Distance {
-  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-    other.distance.partial_cmp(&self.distance)
-  }
-}
-
-impl Ord for Distance {
-  fn cmp(&self, other: &Self) -> Ordering {
-    self.distance.cmp(&other.distance)
-  }
-}
-
 fn dijkstra(map: &Map) -> u64 {
-  let mut unvisited = PriorityQueue::<Pos, Distance>::new();
+  let mut unvisited = PriorityQueue::<Pos, Reverse<u64>>::new();
   let mut nodes = vec![None; map.len() * map.last().unwrap().len()];
   let mut current: Pos = (0, 0);
   let mut current_distance = 0;
   nodes[current.1 * map[0].len() + current.0] = Some(0);
   let end: Pos = (map.last().unwrap().len() - 1, map.len() - 1);
-
   while current != end {
     for neighbour in &get_neighbours(map, &current) {
       let neighbour_local_distance = map[neighbour.1][neighbour.0];
@@ -77,26 +58,16 @@ fn dijkstra(map: &Map) -> u64 {
       let node_exists = !nodes[neighbour.1 * map[0].len() + neighbour.0].is_none();
       if !node_exists || new_distance < nodes[neighbour.1 * map[0].len() + neighbour.0].unwrap() {
         if !node_exists {
-          unvisited.push(
-            *neighbour,
-            Distance {
-              distance: new_distance,
-            },
-          );
+          unvisited.push(*neighbour, Reverse(new_distance));
         } else {
-          unvisited.change_priority(
-            neighbour,
-            Distance {
-              distance: new_distance,
-            },
-          );
+          unvisited.change_priority(neighbour, Reverse(new_distance));
         }
         nodes[neighbour.1 * map[0].len() + neighbour.0] = Some(new_distance);
       }
     }
     let next = unvisited.pop().unwrap();
     current = next.0;
-    current_distance = next.1.distance;
+    current_distance = next.1 .0;
   }
   nodes[end.1 * map[0].len() + end.0].unwrap()
 }
